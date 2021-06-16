@@ -7,9 +7,16 @@
 
 import UIKit
 
+protocol ResetPasswordControllerDelegate: AnyObject {
+    func didSendResetPasswordLink()
+}
+
 class ResetPasswordController: UIViewController {
     
     private var viewModel = ResetPasswordViewModel()
+    weak var delegate: ResetPasswordControllerDelegate?
+    
+    var email: String?
     
     private let backButton: UIButton = {
         let button = UIButton(type: .system)
@@ -22,6 +29,7 @@ class ResetPasswordController: UIViewController {
     private let iconImage = UIImageView(image:  #imageLiteral(resourceName: "firebase-logo"))
     
     private let emailTextField = CustomTextField(placeholder: "Email")
+    
     
     private let resetPasswordButton: AuthButton = {
         let button = AuthButton(type: .system)
@@ -37,14 +45,25 @@ class ResetPasswordController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.hideKeyboardWhenTappedAround() 
         configureUI()
         configureNotificationObservers()
+        loadEmail()
     }
     
     //MARK: - Selectors
     
     @objc func handleResetPassword() {
-        
+        guard let email = viewModel.email else { return }
+        showLoader(true)
+        Service.resetPassword(forEmail: email) { error in
+            self.showLoader(false)
+            if let error = error {
+                self.showMessage(withTitle: "Error", message: error.localizedDescription)
+                return
+            }
+            self.delegate?.didSendResetPasswordLink()
+        }
     }
     
     @objc func handleDismissal() {
@@ -79,6 +98,13 @@ class ResetPasswordController: UIViewController {
         
         view.addSubview(stack)
         stack.anchor(top: iconImage.bottomAnchor, left: view.leftAnchor, right: view.rightAnchor, paddingTop: 32, paddingLeft: 32, paddingRight: 32)
+    }
+    
+    func loadEmail() {
+        guard let email = email else { return }
+        viewModel.email = email
+        emailTextField.text = email
+        updateForm()
     }
     
     func configureNotificationObservers() {

@@ -9,11 +9,16 @@ import UIKit
 import Firebase
 import GoogleSignIn
 
+protocol AuthenticationDelegate: AnyObject {
+    func authenticationComplete()
+}
+
 class LoginController: UIViewController {
     
     // MARK: - Properties
     
     private var viewModel = LoginViewModel()
+    weak var delegate: AuthenticationDelegate?
     
     private let iconImage = UIImageView(image:  #imageLiteral(resourceName: "firebase-logo"))
     
@@ -77,7 +82,7 @@ class LoginController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        self.hideKeyboardWhenTappedAround() 
         configureUI()
         configureNotificationObservers()
         configureGoogleSignIn()
@@ -89,18 +94,22 @@ class LoginController: UIViewController {
         guard let email = emailTextField.text else { return }
         guard let password = passwordTextField.text else { return }
         
+        showLoader(true)
+        
         Service.logUserIn(withEmail: email, password: password) { (result, error) in
+            self.showLoader(false)
             if let error = error {
-                print("DEBUG: Error siging in  \(error.localizedDescription)")
+                self.showMessage(withTitle: "Error", message: error.localizedDescription)
                 return
             }
-            
-            self.dismiss(animated: true, completion: nil)
+            self.delegate?.authenticationComplete()
         }
     }
     
     @objc func handlerForgotPassword() {
         let controller = ResetPasswordController()
+        controller.delegate = self
+        controller.email = emailTextField.text
         navigationController?.pushViewController(controller, animated: true)
     }
     
@@ -110,6 +119,7 @@ class LoginController: UIViewController {
     
     @objc func showRegistrationController() {
         let controller = RegistrationController()
+        controller.delegate = delegate
         navigationController?.pushViewController(controller, animated: true)
     }
     
@@ -191,11 +201,21 @@ extension LoginController: FormViewModel {
     }
 }
 
+// MARK: - GIDSignInDelegate
+
 extension LoginController: GIDSignInDelegate {
     func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error!) {
         Service.signInWithGoogle(didSignInFor: user) { error, ref in
-            print("DEBUG: Succesfully signed in with google account..")
-            self.dismiss(animated: true, completion: nil)
+            self.delegate?.authenticationComplete()
         }
+    }
+}
+
+// MARK: - ResetPasswordControllerDelegate
+
+extension LoginController: ResetPasswordControllerDelegate {
+    func didSendResetPasswordLink() {
+        navigationController?.popViewController(animated: true)
+        self.showMessage(withTitle: "Success", message: MSG_RESET_PASSWORD_LINK_SENTS)
     }
 }

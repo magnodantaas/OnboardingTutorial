@@ -86,6 +86,8 @@ class OnboardingController: UIViewController {
     
 }
 
+// MARK: - PaperOnboardingDataSource
+
 extension OnboardingController: PaperOnboardingDataSource {
     func onboardingItemsCount() -> Int {
         return onboardingItems.count
@@ -95,6 +97,8 @@ extension OnboardingController: PaperOnboardingDataSource {
         return onboardingItems[index]
     }
 }
+
+// MARK: - PaperOnboardingDelegate
 
 extension OnboardingController: PaperOnboardingDelegate {
     func onboardingWillTransitonToIndex(_ index: Int) {

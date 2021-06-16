@@ -13,6 +13,7 @@ class RegistrationController: UIViewController {
     // MARK: - Properties
     
     private var viewModel = RegistrationViewModel()
+    weak var delegate: AuthenticationDelegate?
     
     private let iconImage = UIImageView(image:  #imageLiteral(resourceName: "firebase-logo"))
     
@@ -55,16 +56,29 @@ class RegistrationController: UIViewController {
         guard let email = emailTextField.text else { return }
         guard let password = passwordTextField.text else { return }
         
+        showLoader(true)
+        
         Service.registerUserWithFirebase(withEmail: email,
                                          password: password,
                                          fullname: fullname) { (err, ref) in
+            self.showLoader(false)
             if let error = err {
-                print("DEBUG: Error siging up  \(error.localizedDescription)")
+                self.showMessage(withTitle: "Error", message: error.localizedDescription)
                 return
             }
-            
-            self.dismiss(animated: true, completion: nil)
+
+            self.delegate?.authenticationComplete()
         }
+        
+//        Service.registerUserWithFirestore(withEmail: email, password: password, fullname: fullname) { Error in
+//            self.showLoader(false)
+//            if let error = Error {
+//                self.showMessage(withTitle: "Error", message: error.localizedDescription)
+//                return
+//            }
+//
+//            self.delegate?.authenticationComplete()
+//        }
     }
     
     @objc func showLoginController() {
@@ -88,6 +102,7 @@ class RegistrationController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.hideKeyboardWhenTappedAround() 
         configureUI()
         configureNotificationObservers()
     }

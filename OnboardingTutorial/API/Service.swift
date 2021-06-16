@@ -9,6 +9,7 @@ import Firebase
 import GoogleSignIn
 
 typealias DatabaseCompletion = ((Error?, DatabaseReference) -> Void)
+typealias FirestoreCompletion = (Error?) -> Void
 
 struct Service {
     
@@ -24,14 +25,36 @@ struct Service {
                                          completion: @escaping(DatabaseCompletion)) {
         Auth.auth().createUser(withEmail: email, password: password) { (result, error) in
             if let error = error {
-                print("DEBUG: Failed to create user with error: \(error.localizedDescription)")
+                completion(error, REF_USERS)
                 return
             }
             
             guard let uid = result?.user.uid else { return }
-            let values = ["email": email, "fullname": fullname]
+            let values = ["email": email,
+                          "fullname": fullname,
+                          "hasSeenOnboarding": false] as [String : Any]
             
-            Database.database().reference().child("users").child(uid).updateChildValues(values, withCompletionBlock: completion)
+            REF_USERS.child(uid).updateChildValues(values, withCompletionBlock: completion)
+        }
+    }
+    
+    static func registerUserWithFirestore(withEmail email: String,
+                                         password: String,
+                                         fullname: String,
+                                         completion: @escaping(FirestoreCompletion)) {
+        Auth.auth().createUser(withEmail: email, password: password) { (result, error) in
+            if let error = error {
+                completion(error)
+                return
+            }
+            
+            guard let uid = result?.user.uid else { return }
+            let values = ["email": email,
+                          "fullname": fullname,
+                          "hasSeenOnboarding": false,
+                          "uid": uid] as [String : Any]
+            
+            Firestore.firestore().collection("users").document(uid).setData(values, completion: completion)
         }
     }
     
@@ -45,17 +68,67 @@ struct Service {
         Auth.auth().signIn(with: credential) { (result, error) in
             if let error = error {
                 print("DEBUG: Failed to sign in with google: \(error.localizedDescription)")
+                completion(error, REF_USERS)
                 return
             }
             
             guard let uid = result?.user.uid else { return }
-            guard let email = result?.user.email else { return }
-            guard let fullname = result?.user.displayName else { return }
             
-            let values = ["email": email, "fullname": fullname]
+            REF_USERS.child(uid).observeSingleEvent(of: .value) { snapshot in
+                if !snapshot.exists() {
+                    guard let email = result?.user.email else { return }
+                    guard let fullname = result?.user.displayName else { return }
+                    let values = ["email": email,
+                                  "fullname": fullname,
+                                  "hasSeenOnboarding": false] as [String : Any]
+                    
+                    REF_USERS.child(uid).updateChildValues(values, withCompletionBlock: completion)
+                } else {
+                    print("DEBUG: User already exists..")
+                    completion(error, REF_USERS.child(uid))
+                }
+            }
             
-            Database.database().reference().child("users").child(uid).updateChildValues(values, withCompletionBlock: completion)
+            
         }
         
+    }
+    
+    static func fetchUser(completion: @escaping(User) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        REF_USERS.child(uid).observeSingleEvent(of: .value) { snapshot in
+            let uid = snapshot.key
+            guard let dictionary = snapshot.value as? [String: Any] else { return }
+            let user = User(uid: uid, dictionary: dictionary)
+            completion(user)
+        }
+        
+    }
+    
+    static func fecthUserWithFirestore(completion: @escaping(User) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        Firestore.firestore().collection("users").document(uid).getDocument { (snapshot, error) in
+            guard let dictionary = snapshot?.data() else { return }
+            let user = User(dictionary: dictionary)
+            completion(user)
+        }
+    }
+    
+    static func updateUserHasSeenOnboarding(completion: @escaping(DatabaseCompletion)) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        REF_USERS.child(uid).child("hasSeenOnboarding").setValue(true, withCompletionBlock: completion)
+    }
+    
+    static func updateUserHasSeenOnboardingWithFirebase(completion: @escaping(FirestoreCompletion)) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let data = ["hasSeenOnboarding": true]
+        
+        Firestore.firestore().collection("users").document(uid).updateData(data, completion: completion)
+    }
+    
+    static func resetPassword(forEmail email: String, completion: SendPasswordResetCallback?) {
+        Auth.auth().sendPasswordReset(withEmail: email, completion: completion)
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import JGProgressHUD
 
 extension UIView {
     func anchor(top: NSLayoutYAxisAnchor? = nil,
@@ -95,7 +96,7 @@ extension UIView {
 }
 
 extension UIViewController {
-//    static let hud = JGProgressHUD(style: .dark)
+    static let hud = JGProgressHUD(style: .dark)
 //
     func configureGradientBackground() {
         let gradient = CAGradientLayer()
@@ -104,21 +105,31 @@ extension UIViewController {
         view.layer.addSublayer(gradient)
         gradient.frame = view.frame
     }
-//
-//    func showLoader(_ show: Bool) {
-//        view.endEditing(true)
-//
-//        if show {
-//            UIViewController.hud.show(in: view)
-//        } else {
-//            UIViewController.hud.dismiss()
-//        }
-//    }
-//
-//    func showMessage(withTitle title: String, message: String) {
-//        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-//        alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: nil))
-//        present(alert, animated: true, completion: nil)
-//    }
+
+    func showLoader(_ show: Bool) {
+        view.endEditing(true)
+
+        if show {
+            UIViewController.hud.show(in: view)
+        } else {
+            UIViewController.hud.dismiss()
+        }
+    }
+
+    func showMessage(withTitle title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
+    }
+    
+    func hideKeyboardWhenTappedAround() {
+            let tap = UITapGestureRecognizer(target: self, action: #selector(UIViewController.dismissKeyboard))
+            tap.cancelsTouchesInView = false
+            view.addGestureRecognizer(tap)
+        }
+        
+        @objc func dismissKeyboard() {
+            view.endEditing(true)
+        }
 }
 
