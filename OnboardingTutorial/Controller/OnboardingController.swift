@@ -8,10 +8,16 @@
 import Foundation
 import paper_onboarding
 
+
+protocol OnboardingControllerDelegate: AnyObject {
+    func controllerWantsToDismiss(_ controller: OnboardingController)
+}
+
 class OnboardingController: UIViewController {
     
     // MARK: - Properties
     
+    weak var delegate: OnboardingControllerDelegate?
     private var onboardingItems = [OnboardingItemInfo]()
     private var onboardingView = PaperOnboarding()
     
@@ -39,7 +45,7 @@ class OnboardingController: UIViewController {
     // MARK: - Selectors
     
     @objc func dismissOnboarding() {
-        print("DEBUG: Press dismiss button..")
+        delegate?.controllerWantsToDismiss(self)
     }
     
     // MARK: - Helpers
@@ -92,7 +98,8 @@ extension OnboardingController: PaperOnboardingDataSource {
 
 extension OnboardingController: PaperOnboardingDelegate {
     func onboardingWillTransitonToIndex(_ index: Int) {
-        let shouldShow = index == onboardingItems.count - 1 ? true : false
+        let viewModel = OnboardingViewModel(itemCount: onboardingItems.count)
+        let shouldShow = viewModel.shouldShowGetStartedButton(forIndex: index)
         animateGetStartedButton(shouldShow)
     }
 }

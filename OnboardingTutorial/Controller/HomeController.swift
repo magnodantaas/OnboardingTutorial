@@ -12,6 +12,8 @@ class HomeController: UIViewController {
     
     // MARK: - Properties
     
+    private var shouldShowOnboarding = true
+    
     // MARK: - LifeCycle
     
     override func viewDidLoad() {
@@ -23,15 +25,15 @@ class HomeController: UIViewController {
     // MARK: - Selectors
     
     @objc func handleLogout() {
-        let alert = UIAlertController(title: nil, message: "Are you sure you want to log out?",
+        let alert = UIAlertController(title: nil, message: MSG_ALERT_LOGOUT,
                                       preferredStyle: .actionSheet)
-        alert.addAction(UIAlertAction(title: "Log Out",
+        alert.addAction(UIAlertAction(title: MSG_LOGOUT,
                                       style: .destructive,
                                       handler: { _ in
             self.logout()
         }))
         
-        alert.addAction(UIAlertAction(title: "Cancel",
+        alert.addAction(UIAlertAction(title: MSG_CANCEL,
                                       style: .cancel,
                                       handler: nil))
         
@@ -46,7 +48,9 @@ class HomeController: UIViewController {
                 self.presentLoginController()
             }
         } else {
-            print("DEBUG: User is logged in..")
+            if shouldShowOnboarding {
+                presentOnboardingController()
+            }
         }
     }
     
@@ -66,6 +70,13 @@ class HomeController: UIViewController {
         self.present(nav, animated: true, completion: nil)
     }
     
+    fileprivate func presentOnboardingController() {
+        let controller = OnboardingController()
+        controller.delegate = self
+        controller.modalPresentationStyle = .fullScreen
+        present(controller, animated: true, completion: nil)
+    }
+    
     // MARK: - Helpers
     
     func configureUI() {
@@ -80,4 +91,11 @@ class HomeController: UIViewController {
         navigationItem.leftBarButtonItem?.tintColor = .white
     }
     
+}
+
+extension HomeController: OnboardingControllerDelegate {
+    func controllerWantsToDismiss(_ controller: OnboardingController) {
+        controller.dismiss(animated: true, completion: nil)
+        shouldShowOnboarding.toggle()
+    }
 }
